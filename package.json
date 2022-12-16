@@ -1,21 +1,18 @@
 {
-  "name": "terrainproj",
-  "version": "1.0.0",
-  "description": "Terrain project",
-  "main": "index.js",
+  "name": "terrainsim",
+  "private": true,
+  "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
   },
-  "keywords": [
-    "terrain"
-  ],
-  "author": "victor och gabriel",
-  "license": "ISC",
   "devDependencies": {
+    "vite": "^4.0.0"
+  },
+  "dependencies": {
+    "simplex-noise": "^4.0.1",
     "three": "^0.147.0"
   }
-  
-   
-  
 }
