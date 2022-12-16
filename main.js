@@ -3,6 +3,7 @@ import { createNoise2D } from 'simplex-noise';
 import * as THREE from 'three';
 import { OrbitControls } from './node_modules/three/examples/jsm/controls/OrbitControls';
 import { GUI } from 'dat.gui'
+import {Sky} from './node_modules/three/examples/jsm/objects/Sky.js';
 
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -23,6 +24,19 @@ light.position.z = 0;
 light.position.x = -3;
 light.position.y = 200;
 
+//Sky
+let sky = new Sky();
+sky.scale.setScalar( 450000 );
+scene.add( sky );
+
+
+//Fog
+const color = 0xFFFFFF;  // white
+const near = 10;
+const far = 1500;
+scene.fog = new THREE.Fog(color, near, far);
+
+
 const planeWidth = 2000;
 const planeHeight = 2000;
 var geometry = new THREE.PlaneGeometry(planeWidth, planeHeight,256, 256);
@@ -33,7 +47,6 @@ var plane = new THREE.Mesh(geometry, material);
 
 scene.add(plane);
 plane.rotation.x = -Math.PI / 2;
-
 
 //Plane noise
 const noise = createNoise2D();
