@@ -36,13 +36,11 @@ const near = 10;
 const far = 1500;
 scene.fog = new THREE.Fog(color, near, far);
 
-
+//Plane
 const planeWidth = 2000;
 const planeHeight = 2000;
 var geometry = new THREE.PlaneGeometry(planeWidth, planeHeight,256, 256);
-
 var material = new THREE.MeshPhongMaterial();
-
 var plane = new THREE.Mesh(geometry, material);
 
 scene.add(plane);
@@ -59,18 +57,18 @@ var amplitudes = new function() {
   this.octav5 = 2.3;
 }
 
-function computeTerrain(octav1, octav2,octav3,octav4,octav5) {
+function computeTerrain(octav1,octav2,octav3,octav4,octav5, offset=0) {
   var octave_value = 0.002;
   for (var i = 2; i < geometry.attributes.position.array.length; i = i + 3) {
 
     var x = plane.geometry.attributes.position.array[i-2];
-    var y = plane.geometry.attributes.position.array[i-1];
+    var y = plane.geometry.attributes.position.array[i-1]+offset;
   
     var elevation = (octav1*noise(x * octave_value, y * octave_value) + 
-    octav2*noise(x * octave_value * 2, y * octave_value*2)+
-    octav3*noise(x * octave_value* 4, y * octave_value * 4)+
-    octav4*noise(x * octave_value * 8, y * octave_value*16)+
-    octav5*noise(x * octave_value * 16, y * octave_value*32));
+    octav2*noise(x * octave_value* 2, y * octave_value*2)+
+    octav3*noise(x * octave_value* 4, y * octave_value*4)+
+    octav4*noise(x * octave_value* 8, y * octave_value*16)+
+    octav5*noise(x * octave_value* 16, y * octave_value*32));
     
   
     plane.geometry.attributes.position.array[i] = elevation;
@@ -81,8 +79,7 @@ function computeTerrain(octav1, octav2,octav3,octav4,octav5) {
 
 computeTerrain(amplitudes.octav1,amplitudes.octav2,amplitudes.octav3, amplitudes.octav4, amplitudes.octav5)
 
-camera.position.z = 1;
-
+//Gui
 const gui = new GUI()
 gui.domElement.id = 'gui_css';
 const AmplitudeFolder = gui.addFolder('Amplitude');
@@ -102,7 +99,12 @@ gui.updateDisplay();
 
 function animate() {
   requestAnimationFrame(animate);
-  camera.position.z -= 1;
+  //camera.position.z -= 1;
+
+  //Tidsvariabel
+  var offset = Date.now() * 0.01;
+
+  computeTerrain(amplitudes.octav1,amplitudes.octav2,amplitudes.octav3, amplitudes.octav4, amplitudes.octav5, offset)
   //controls.update();
 	renderer.render(scene, camera);
 }
