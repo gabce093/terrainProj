@@ -59,19 +59,26 @@ var amplitudes = new function() {
 
 function computeTerrain(octav1,octav2,octav3,octav4,octav5, offset=0) {
   var octave_value = 0.002;
-  for (var i = 2; i < geometry.attributes.position.array.length; i = i + 3) {
+  var distance_from_highway = 0;
+  var higway_size = 20;
+
+  for (var i = 2; i < plane.geometry.attributes.position.array.length; i = i + 3) {
 
     var x = plane.geometry.attributes.position.array[i-2];
     var y = plane.geometry.attributes.position.array[i-1]+offset;
+
+    if (x > higway_size || x < -higway_size){
+      distance_from_highway = Math.abs(x) - 10;
+    } 
   
     var elevation = (octav1*noise(x * octave_value, y * octave_value) + 
     octav2*noise(x * octave_value* 2, y * octave_value*2)+
     octav3*noise(x * octave_value* 4, y * octave_value*4)+
-    octav4*noise(x * octave_value* 8, y * octave_value*16)+
-    octav5*noise(x * octave_value* 16, y * octave_value*32));
+    octav4*noise(x * octave_value* 8, y * octave_value*8)+
+    octav5*noise(x * octave_value* 16, y * octave_value*16));
     
   
-    plane.geometry.attributes.position.array[i] = elevation;
+    plane.geometry.attributes.position.array[i] = elevation*distance_from_highway*0.005;
   }
   plane.geometry.attributes.position.needsUpdate = true;
   plane.geometry.computeVertexNormals();
@@ -109,7 +116,7 @@ function animate() {
 
   //Tidsvariabel
   var offset = Date.now() * speed.speed;
-
+  
   computeTerrain(amplitudes.octav1,amplitudes.octav2,amplitudes.octav3, amplitudes.octav4, amplitudes.octav5, offset)
   //controls.update();
 	renderer.render(scene, camera);
