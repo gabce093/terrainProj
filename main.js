@@ -79,6 +79,8 @@ function computeTerrain(octav1,octav2,octav3,octav4,octav5, offset=0) {
 
 computeTerrain(amplitudes.octav1,amplitudes.octav2,amplitudes.octav3, amplitudes.octav4, amplitudes.octav5)
 
+var speed = {speed: 0.02};
+
 //Gui
 const gui = new GUI()
 gui.domElement.id = 'gui_css';
@@ -95,6 +97,10 @@ AmplitudeFolder.add(amplitudes, 'octav5', 0, 10).onChange(
   ()=> computeTerrain(amplitudes.octav1,amplitudes.octav2,amplitudes.octav3, amplitudes.octav4, amplitudes.octav5));
 
 AmplitudeFolder.open();
+
+const SpeedFolder = gui.addFolder('Speed');
+SpeedFolder.add(speed, 'speed', 0, 0.1);
+
 gui.updateDisplay();
 
 function animate() {
@@ -102,7 +108,7 @@ function animate() {
   //camera.position.z -= 1;
 
   //Tidsvariabel
-  var offset = Date.now() * 0.01;
+  var offset = Date.now() * speed.speed;
 
   computeTerrain(amplitudes.octav1,amplitudes.octav2,amplitudes.octav3, amplitudes.octav4, amplitudes.octav5, offset)
   //controls.update();
