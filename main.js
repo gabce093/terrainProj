@@ -4,17 +4,18 @@ import * as THREE from 'three';
 import { OrbitControls } from './node_modules/three/examples/jsm/controls/OrbitControls';
 import { GUI } from 'dat.gui'
 import {Sky} from './node_modules/three/examples/jsm/objects/Sky.js';
+import { hwFrag, hwVert } from './highwayShaders';
 
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 2000);
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
 //const controls = new OrbitControls(camera, renderer.domElement);
 
 //controls.update() must be called after any manual changes to the camera's transform
-camera.position.set(0, 30, 100);
+camera.position.set(0, 30, 1000);
 //controls.update();
 
 scene.add(new THREE.AmbientLight(0x000055));
@@ -23,6 +24,8 @@ scene.add(light);
 light.position.z = -2000;
 light.position.x = 0;
 light.position.y = 200;
+
+light.position
 
 //Sky
 let sky = new Sky();
@@ -43,8 +46,31 @@ var geometry = new THREE.PlaneGeometry(planeWidth, planeHeight,256, 256);
 var material = new THREE.MeshPhongMaterial();
 var plane = new THREE.Mesh(geometry, material);
 
+//Highway
+const highway_size = 25;
+var highway_geometry = new THREE.PlaneGeometry(highway_size, planeHeight, 20, 256);
+var highway_material = new THREE.ShaderMaterial({
+  vertexShader: hwVert,
+  fragmentShader: hwFrag,
+  uniforms: {
+    offset: {
+      value: 0.0,
+    }
+  }
+})
+
+var highway = new THREE.Mesh(highway_geometry,highway_material);
+
+
+console.log(highway)
+
+
+//Add to scene
+scene.add(highway);
+highway.rotation.x = -Math.PI / 2;
 scene.add(plane);
 plane.rotation.x = -Math.PI / 2;
+highway.position.y = 0.1;
 
 //Plane noise
 const noise = createNoise2D();
@@ -60,14 +86,12 @@ var amplitudes = new function() {
 function computeTerrain(octav1,octav2,octav3,octav4,octav5, offset=0) {
   var octave_value = 0.002;
   var distance_from_highway = 0;
-  var higway_size = 20;
-
   for (var i = 2; i < plane.geometry.attributes.position.array.length; i = i + 3) {
 
     var x = plane.geometry.attributes.position.array[i-2];
     var y = plane.geometry.attributes.position.array[i-1]+offset;
 
-    if (x > higway_size || x < -higway_size){
+    if (x > highway_size || x < -highway_size){
       distance_from_highway = Math.abs(x) - 10;
     } 
   
@@ -84,8 +108,6 @@ function computeTerrain(octav1,octav2,octav3,octav4,octav5, offset=0) {
   plane.geometry.computeVertexNormals();
 }
 
-computeTerrain(amplitudes.octav1,amplitudes.octav2,amplitudes.octav3, amplitudes.octav4, amplitudes.octav5)
-
 var speed = {speed: 1};
 
 //Gui
@@ -98,9 +120,9 @@ AmplitudeFolder.add(amplitudes, 'octav2', 0, 100).onChange(
   ()=> computeTerrain(amplitudes.octav1,amplitudes.octav2,amplitudes.octav3, amplitudes.octav4, amplitudes.octav5));
 AmplitudeFolder.add(amplitudes, 'octav3', 0, 100).onChange(
   ()=> computeTerrain(amplitudes.octav1,amplitudes.octav2,amplitudes.octav3, amplitudes.octav4, amplitudes.octav5));
-AmplitudeFolder.add(amplitudes, 'octav4', 0, 10).onChange(
+AmplitudeFolder.add(amplitudes, 'octav4', 0, 50).onChange(
   ()=> computeTerrain(amplitudes.octav1,amplitudes.octav2,amplitudes.octav3, amplitudes.octav4, amplitudes.octav5));
-AmplitudeFolder.add(amplitudes, 'octav5', 0, 10).onChange(
+AmplitudeFolder.add(amplitudes, 'octav5', 0, 20).onChange(
   ()=> computeTerrain(amplitudes.octav1,amplitudes.octav2,amplitudes.octav3, amplitudes.octav4, amplitudes.octav5));
 
 AmplitudeFolder.open();
@@ -119,8 +141,8 @@ function animate() {
 
   //Tidsvariabel
   var offset = clock.getElapsedTime()*speed.speed;
-  
-  computeTerrain(amplitudes.octav1,amplitudes.octav2,amplitudes.octav3, amplitudes.octav4, amplitudes.octav5, offset)
+  highway.material.uniforms.offset.value = offset;
+  computeTerrain(amplitudes.octav1,amplitudes.octav2,amplitudes.octav3, amplitudes.octav4, amplitudes.octav5, offset);
   //controls.update();
 	renderer.render(scene, camera);
 }
