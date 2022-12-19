@@ -10,18 +10,18 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 2000);
 //const controls = new OrbitControls(camera, renderer.domElement);
 
 //controls.update() must be called after any manual changes to the camera's transform
-camera.position.set(0, 100, 100);
+camera.position.set(0, 30, 100);
 //controls.update();
 
 scene.add(new THREE.AmbientLight(0x000055));
 var light = new THREE.PointLight(0xffcc77, 1);
 scene.add(light);
-light.position.z = 0;
-light.position.x = -3;
+light.position.z = -2000;
+light.position.x = 0;
 light.position.y = 200;
 
 //Sky
@@ -32,8 +32,8 @@ scene.add( sky );
 
 //Fog
 const color = 0xFFFFFF;  // white
-const near = 10;
-const far = 1500;
+const near = 100;
+const far = 1700;
 scene.fog = new THREE.Fog(color, near, far);
 
 //Plane
@@ -77,8 +77,8 @@ function computeTerrain(octav1,octav2,octav3,octav4,octav5, offset=0) {
     octav4*noise(x * octave_value* 8, y * octave_value*8)+
     octav5*noise(x * octave_value* 16, y * octave_value*16));
     
-  
     plane.geometry.attributes.position.array[i] = elevation*distance_from_highway*0.005;
+    distance_from_highway = 0;
   }
   plane.geometry.attributes.position.needsUpdate = true;
   plane.geometry.computeVertexNormals();
@@ -86,7 +86,7 @@ function computeTerrain(octav1,octav2,octav3,octav4,octav5, offset=0) {
 
 computeTerrain(amplitudes.octav1,amplitudes.octav2,amplitudes.octav3, amplitudes.octav4, amplitudes.octav5)
 
-var speed = {speed: 0.02};
+var speed = {speed: 1};
 
 //Gui
 const gui = new GUI()
@@ -106,16 +106,19 @@ AmplitudeFolder.add(amplitudes, 'octav5', 0, 10).onChange(
 AmplitudeFolder.open();
 
 const SpeedFolder = gui.addFolder('Speed');
-SpeedFolder.add(speed, 'speed', 0, 0.1);
+SpeedFolder.add(speed, 'speed', 1, 100);
+SpeedFolder.open();
 
 gui.updateDisplay();
+
+var clock = new THREE.Clock();
 
 function animate() {
   requestAnimationFrame(animate);
   //camera.position.z -= 1;
 
   //Tidsvariabel
-  var offset = Date.now() * speed.speed;
+  var offset = clock.getElapsedTime()*speed.speed;
   
   computeTerrain(amplitudes.octav1,amplitudes.octav2,amplitudes.octav3, amplitudes.octav4, amplitudes.octav5, offset)
   //controls.update();
