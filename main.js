@@ -3,7 +3,7 @@ import { createNoise2D } from 'simplex-noise';
 import * as THREE from 'three';
 import { OrbitControls } from './node_modules/three/examples/jsm/controls/OrbitControls';
 import { GUI } from 'dat.gui'
-import {Sky} from './node_modules/three/examples/jsm/objects/Sky.js';
+//import {Sky} from './node_modules/three/examples/jsm/objects/Sky.js';
 import { hwFrag, hwVert } from './highwayShaders';
 
 const renderer = new THREE.WebGLRenderer();
@@ -12,7 +12,7 @@ document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
-//const controls = new OrbitControls(camera, renderer.domElement);
+const controls = new OrbitControls(camera, renderer.domElement);
 
 //controls.update() must be called after any manual changes to the camera's transform
 camera.position.set(0, 30, 1000);
@@ -28,16 +28,42 @@ light.position.y = 200;
 light.position
 
 //Sky
-let sky = new Sky();
-sky.scale.setScalar( 450000 );
-scene.add( sky );
+//let sky = new Sky();
+//sky.scale.setScalar( 450000 );
+//scene.add( sky );
 
+var skyMaterial = new THREE.MeshStandardMaterial({
+  color: 0xe600e6,
+});
+
+
+var skyGeo = new THREE.SphereGeometry(800, 25, 25);
+var sky = new THREE.Mesh(skyGeo, skyMaterial);
+sky.material.side = THREE.BackSide;
+scene.add(sky);
+
+//sun
+var sunMaterial = new THREE.MeshStandardMaterial({
+  color: 0xe65c00,
+  emissive: 0xe65c00,
+  emissiveIntensity : 100.0,
+});
+var sunGeo = new THREE.SphereGeometry(400, 25, 25);
+var sun = new THREE.Mesh(sunGeo, sunMaterial);
+scene.add(sun);
+sun.translateZ(-700);
+sun.translateY(150);
+
+var light = new THREE.PointLight(0xffcc77, 1);
+scene.add(light);
+light.position.z = -800;
+light.position.y = 150;
 
 //Fog
 const color = 0xFFFFFF;  // white
-const near = 100;
+const near = 1000;
 const far = 1700;
-scene.fog = new THREE.Fog(color, near, far);
+//scene.fog = new THREE.Fog(color, near, far);
 
 //Plane
 const planeWidth = 2000;
@@ -60,8 +86,6 @@ var highway_material = new THREE.ShaderMaterial({
 })
 
 var highway = new THREE.Mesh(highway_geometry,highway_material);
-
-
 console.log(highway)
 
 
@@ -143,7 +167,7 @@ function animate() {
   var offset = clock.getElapsedTime()*speed.speed;
   highway.material.uniforms.offset.value = offset;
   computeTerrain(amplitudes.octav1,amplitudes.octav2,amplitudes.octav3, amplitudes.octav4, amplitudes.octav5, offset);
-  //controls.update();
+  controls.update();
 	renderer.render(scene, camera);
 }
 animate();
