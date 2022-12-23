@@ -50,7 +50,7 @@ function loadCar (){
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
 
-const controls = new OrbitControls(camera, renderer.domElement);
+//const controls = new OrbitControls(camera, renderer.domElement);
 
 //controls.update() must be called after any manual changes to the camera's transform
 camera.position.set(0, 30, 1000);
@@ -250,7 +250,7 @@ function animate() {
   texture.needsUpdate = true;
   computeTerrain(amplitudes.octav1,amplitudes.octav2,amplitudes.octav3, amplitudes.octav4, amplitudes.octav5, offset);
 
-  controls.update();
+  //controls.update();
 
 	renderer.render(scene, camera);
 }
