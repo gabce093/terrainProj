@@ -6,6 +6,8 @@ import { GUI } from 'dat.gui'
 import {Sky} from './node_modules/three/examples/jsm/objects/Sky.js';
 import { hwFrag, hwVert } from './highwayShaders';
 import { CanvasTexture } from 'three';
+import { OBJLoader } from './node_modules/three/examples/jsm/loaders/OBJLoader.js';
+import { MTLLoader } from './node_modules/three/examples/jsm/loaders/MTLLoader.js';
 
 const noise = createNoise2D();
 const renderer = new THREE.WebGLRenderer();
@@ -13,15 +15,41 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 
 //Test for skyshader
 renderer.toneMappingExposure = 0.5;
-
 document.body.appendChild(renderer.domElement);
 
+//progress console output when loading car
+const onProgress = function ( xhr ) {
+  if ( xhr.lengthComputable ) {
+    const percentComplete = xhr.loaded / xhr.total * 100;
+    console.log( Math.round( percentComplete, 2 ) + '% downloaded' );
+  }
+};
+//Loads the car
+function loadCar (){ 
+  new MTLLoader()
+  .setPath( '' )
+  .load( 'CyberpunkDeLorean.mtl', function ( materials ) {
+    materials.preload();
+    new OBJLoader()
+      .setMaterials( materials )
+      .setPath( '' )
+      .load( 'CyberpunkDeLorean.obj', function ( object ) {
+        object.position.set( 0.0,6.0,950 );
+        var xRot = new THREE.Euler( Math.PI/2.0, Math.PI/1.0 , 0.0, 'XYZ' );
+        object.rotation.copy(xRot);
+        scene.add( object );
+      }, onProgress );
+  } );
+  }
+  //turn car on or off
+  var controller = new function() {  
+    this.onOrOff=false;
+  }
 
+//scene
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
-//const controls = new OrbitControls(camera, renderer.domElement);
-
-//controls.update() must be called after any manual changes to the camera's transform
+const controls = new OrbitControls(camera, renderer.domElement);
 camera.position.set(0, 30, 1000);
 
 scene.add(new THREE.AmbientLight(0x000055, 0.5));
@@ -34,9 +62,7 @@ light.position.y = 200;
 //Sky-Shader
 let skyShader = new Sky();
 skyShader.scale.setScalar( 4500000 );
-scene.add( skyShader );
-sun = new THREE.Vector3(10000, 10000, 10000);
-
+var sun = new THREE.Vector3(10000, 10000, 10000);
 const phi = THREE.MathUtils.degToRad( 90 - 2 );
 const theta = THREE.MathUtils.degToRad( 180 );
 
@@ -45,27 +71,6 @@ skyShader.material.uniforms.sunPosition.value.copy(sun);
 skyShader.material.uniforms.rayleigh.value = 5;
 skyShader.material.uniforms.mieDirectionalG.value = 0.5;
 
-//Sky-sphere
-var skyMaterial = new THREE.MeshStandardMaterial({
-  color: 0xe600e6,
-});
-var skyGeo = new THREE.SphereGeometry(800, 25, 25);
-var sky = new THREE.Mesh(skyGeo, skyMaterial);
-sky.material.side = THREE.BackSide;
-//scene.add(sky);
-
-//Sun-Sphere
-var sunMaterial = new THREE.MeshStandardMaterial({
-  color: 0xe65c00,
-  emissive: 0xe65c00,
-  emissiveIntensity : 100.0,
-});
-var sunGeo = new THREE.SphereGeometry(400, 25, 25);
-var sun = new THREE.Mesh(sunGeo, sunMaterial);
-//scene.add(sun);
-sun.translateZ(-700);
-sun.translateY(150);
-
 var light = new THREE.PointLight(0xffcc77, 1);
 scene.add(light);
 light.position.z = -1000;
@@ -73,15 +78,16 @@ light.position.y = 150;
 
 //Fog
 const color = 0xFFFFFF;  // white
-const near = 1300;
+const near = 1680;
 const far = 1700;
 //scene.fog = new THREE.Fog(color, near, far);
 
 //Plane
 const planeWidth = 2000;
 const planeHeight = 2000;
-var geometry = new THREE.PlaneGeometry(planeWidth, planeHeight,256, 256);
+var geometry = new THREE.PlaneGeometry(planeWidth*1.5, planeHeight*1.5,256, 256);
 var material = new THREE.MeshPhongMaterial();
+
 var plane = new THREE.Mesh(geometry, material);
 
 //Highway
@@ -141,6 +147,7 @@ var highway_material = new THREE.MeshPhongMaterial({
 var highway = new THREE.Mesh(highway_geometry,highway_material);
 
 //Add to scene
+scene.add( skyShader );
 scene.add(highway);
 highway.rotation.x = -Math.PI / 2;
 scene.add(plane);
@@ -148,7 +155,6 @@ plane.rotation.x = -Math.PI / 2;
 highway.position.y = 0.1;
 
 //Plane noise
-
 var amplitudes = new function() {
   this.octav1 = 66;
   this.octav2 = 7;
@@ -198,12 +204,14 @@ AmplitudeFolder.add(amplitudes, 'octav4', 0, 50).onChange(
   ()=> computeTerrain(amplitudes.octav1,amplitudes.octav2,amplitudes.octav3, amplitudes.octav4, amplitudes.octav5));
 AmplitudeFolder.add(amplitudes, 'octav5', 0, 20).onChange(
   ()=> computeTerrain(amplitudes.octav1,amplitudes.octav2,amplitudes.octav3, amplitudes.octav4, amplitudes.octav5));
-
 AmplitudeFolder.open();
 
 const SpeedFolder = gui.addFolder('Speed');
 SpeedFolder.add(speed, 'speed', 1, 150);
 SpeedFolder.open();
+
+const carFolder = gui.addFolder('Car');
+carFolder.add(controller, 'onOrOff').listen().onChange(loadCar);
 
 gui.updateDisplay();
 
@@ -220,7 +228,7 @@ function animate() {
   texture.needsUpdate = true;
   computeTerrain(amplitudes.octav1,amplitudes.octav2,amplitudes.octav3, amplitudes.octav4, amplitudes.octav5, offset);
 
-  //controls.update();
+  controls.update();
 
 	renderer.render(scene, camera);
 }
