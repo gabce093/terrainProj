@@ -19,7 +19,7 @@ document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
-//const controls = new OrbitControls(camera, renderer.domElement);
+const controls = new OrbitControls(camera, renderer.domElement);
 
 //controls.update() must be called after any manual changes to the camera's transform
 camera.position.set(0, 30, 1000);
@@ -86,11 +86,11 @@ var plane = new THREE.Mesh(geometry, material);
 
 //Highway
 const highway_size = 25;
-var highway_geometry = new THREE.PlaneGeometry(highway_size, planeHeight, 20, 256);
+var highway_geometry = new THREE.PlaneGeometry(highway_size+5, planeHeight, 20, 256);
 
 //Generate highway colortexture
 const color_ctx = document.createElement('canvas').getContext('2d');
-color_ctx.canvas.width = 20;
+color_ctx.canvas.width = 30;
 color_ctx.canvas.height = 256;
 var texture = new CanvasTexture(color_ctx.canvas)
 texture.wrapT = THREE.RepeatWrapping;
@@ -100,11 +100,11 @@ texture.minFilter = THREE.NearestFilter;
 function drawHighway() {
   color_ctx.fillStyle = 'black';
   color_ctx.fillRect(0, 0, color_ctx.canvas.width, color_ctx.canvas.height);
-  const x = 9.5;
+  const x = 14;
   color_ctx.fillStyle = '#fff2ca';
 
   for(var y = 0; y < color_ctx.canvas.height; y += 8) {
-    color_ctx.fillRect(x, y, 1, 5);
+    color_ctx.fillRect(x, y, 2, 5);
   }
   texture.needsUpdate = true;
 }
@@ -147,8 +147,10 @@ scene.add(plane);
 plane.rotation.x = -Math.PI / 2;
 highway.position.y = 0.1;
 
-//Plane noise
+//Generate Terrain
 
+//Customizable variables
+var speed = {speed: 20};
 var amplitudes = new function() {
   this.octav1 = 66;
   this.octav2 = 7;
@@ -156,10 +158,12 @@ var amplitudes = new function() {
   this.octav4 = 3.3;
   this.octav5 = 2.3;
 }
+var ridged = {ridged: false};
 
 function computeTerrain(octav1,octav2,octav3,octav4,octav5, offset=0) {
   var octave_value = 0.002;
   var distance_from_highway = 0;
+
   for (var i = 2; i < plane.geometry.attributes.position.array.length; i = i + 3) {
 
     var x = plane.geometry.attributes.position.array[i-2];
@@ -174,20 +178,29 @@ function computeTerrain(octav1,octav2,octav3,octav4,octav5, offset=0) {
     octav3*noise(x * octave_value* 4, y * octave_value*4)+
     octav4*noise(x * octave_value* 8, y * octave_value*8)+
     octav5*noise(x * octave_value* 16, y * octave_value*16));
+
+    if(ridged.ridged) {
+      elevation = Math.abs(elevation);
+      elevation = 1 - elevation;
+      elevation *= elevation;
+      plane.geometry.attributes.position.array[i] = elevation*distance_from_highway*0.00007;
+    } else {
+      plane.geometry.attributes.position.array[i] = elevation*distance_from_highway*0.005;
+    }
     
-    plane.geometry.attributes.position.array[i] = elevation*distance_from_highway*0.005;
     distance_from_highway = 0;
   }
+
   plane.geometry.attributes.position.needsUpdate = true;
   plane.geometry.computeVertexNormals();
 }
 
-var speed = {speed: 20};
+
 
 //Gui
 const gui = new GUI()
 gui.domElement.id = 'gui_css';
-const AmplitudeFolder = gui.addFolder('Amplitude');
+const AmplitudeFolder = gui.addFolder('Amplitudes');
 AmplitudeFolder.add(amplitudes, 'octav1', 0, 100).onChange(
   ()=> computeTerrain(amplitudes.octav1,amplitudes.octav2,amplitudes.octav3, amplitudes.octav4, amplitudes.octav5));
 AmplitudeFolder.add(amplitudes, 'octav2', 0, 100).onChange(
@@ -198,8 +211,12 @@ AmplitudeFolder.add(amplitudes, 'octav4', 0, 50).onChange(
   ()=> computeTerrain(amplitudes.octav1,amplitudes.octav2,amplitudes.octav3, amplitudes.octav4, amplitudes.octav5));
 AmplitudeFolder.add(amplitudes, 'octav5', 0, 20).onChange(
   ()=> computeTerrain(amplitudes.octav1,amplitudes.octav2,amplitudes.octav3, amplitudes.octav4, amplitudes.octav5));
-
 AmplitudeFolder.open();
+
+const RidgedFolder = gui.addFolder('Ridged Noise');
+RidgedFolder.add(ridged, 'ridged').onChange(
+  () => computeTerrain(amplitudes.octav1,amplitudes.octav2,amplitudes.octav3, amplitudes.octav4, amplitudes.octav5));
+RidgedFolder.open();
 
 const SpeedFolder = gui.addFolder('Speed');
 SpeedFolder.add(speed, 'speed', 1, 150);
@@ -220,7 +237,7 @@ function animate() {
   texture.needsUpdate = true;
   computeTerrain(amplitudes.octav1,amplitudes.octav2,amplitudes.octav3, amplitudes.octav4, amplitudes.octav5, offset);
 
-  //controls.update();
+  controls.update();
 
 	renderer.render(scene, camera);
 }
