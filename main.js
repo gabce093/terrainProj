@@ -5,7 +5,9 @@ import { OrbitControls } from './node_modules/three/examples/jsm/controls/OrbitC
 import { GUI } from 'dat.gui'
 import {Sky} from './node_modules/three/examples/jsm/objects/Sky.js';
 import { hwFrag, hwVert } from './highwayShaders';
+import { CanvasTexture } from 'three';
 
+const noise = createNoise2D();
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 
@@ -17,20 +19,17 @@ document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
-const controls = new OrbitControls(camera, renderer.domElement);
+//const controls = new OrbitControls(camera, renderer.domElement);
 
 //controls.update() must be called after any manual changes to the camera's transform
 camera.position.set(0, 30, 1000);
-//controls.update();
 
-scene.add(new THREE.AmbientLight(0x000055));
-var light = new THREE.PointLight(0xffcc77, 1);
+scene.add(new THREE.AmbientLight(0x000055, 0.5));
+var light = new THREE.PointLight(0xe65c00, 1);
 scene.add(light);
 light.position.z = -2000;
 light.position.x = 0;
 light.position.y = 200;
-
-
 
 //Sky-Shader
 let skyShader = new Sky();
@@ -38,7 +37,6 @@ skyShader.scale.setScalar( 4500000 );
 scene.add( skyShader );
 sun = new THREE.Vector3(10000, 10000, 10000);
 
-console.log(skyShader.material.uniforms)
 const phi = THREE.MathUtils.degToRad( 90 - 2 );
 const theta = THREE.MathUtils.degToRad( 180 );
 
@@ -70,14 +68,14 @@ sun.translateY(150);
 
 var light = new THREE.PointLight(0xffcc77, 1);
 scene.add(light);
-light.position.z = -800;
+light.position.z = -1000;
 light.position.y = 150;
 
 //Fog
 const color = 0xFFFFFF;  // white
 const near = 1300;
 const far = 1700;
-scene.fog = new THREE.Fog(color, near, far);
+//scene.fog = new THREE.Fog(color, near, far);
 
 //Plane
 const planeWidth = 2000;
@@ -89,19 +87,58 @@ var plane = new THREE.Mesh(geometry, material);
 //Highway
 const highway_size = 25;
 var highway_geometry = new THREE.PlaneGeometry(highway_size, planeHeight, 20, 256);
-var highway_material = new THREE.ShaderMaterial({
-  vertexShader: hwVert,
-  fragmentShader: hwFrag,
-  uniforms: {
-    offset: {
-      value: 0.0,
+
+//Generate highway colortexture
+const color_ctx = document.createElement('canvas').getContext('2d');
+color_ctx.canvas.width = 20;
+color_ctx.canvas.height = 256;
+var texture = new CanvasTexture(color_ctx.canvas)
+texture.wrapT = THREE.RepeatWrapping;
+texture.repeat.y = 1;
+texture.minFilter = THREE.NearestFilter;
+
+function drawHighway() {
+  color_ctx.fillStyle = 'black';
+  color_ctx.fillRect(0, 0, color_ctx.canvas.width, color_ctx.canvas.height);
+  const x = 9.5;
+  color_ctx.fillStyle = '#fff2ca';
+
+  for(var y = 0; y < color_ctx.canvas.height; y += 8) {
+    color_ctx.fillRect(x, y, 1, 5);
+  }
+  texture.needsUpdate = true;
+}
+drawHighway();
+
+//Generate bump map
+const bump_ctx = document.createElement('canvas').getContext('2d');
+
+bump_ctx.canvas.width = 100;
+bump_ctx.canvas.height = 256;
+var bump_map = new CanvasTexture(bump_ctx.canvas)
+bump_map.wrapT = THREE.RepeatWrapping;
+bump_map.repeat.y = 1;
+
+function drawBumpMap() {
+  for(var y = 0; y < bump_ctx.canvas.height; y++) {
+    for(var x = 0; x < bump_ctx.canvas.width; x++) {
+      var value = Math.abs(noise(x,y));
+      value = value*25;
+      bump_ctx.fillStyle = "rgba(" + value + "," + value + "," + value + ",1)";
+      bump_ctx.fillRect(x, y, 1, 1);
     }
   }
+  bump_map.needsUpdate = true;
+}
+drawBumpMap();
+
+var highway_material = new THREE.MeshPhongMaterial({
+  map: texture, 
+  bumpMap: bump_map, 
+  emissiveMap: texture, 
+  emissive: 'white',
 })
-
 var highway = new THREE.Mesh(highway_geometry,highway_material);
-console.log(highway)
-
 
 //Add to scene
 scene.add(highway);
@@ -111,7 +148,6 @@ plane.rotation.x = -Math.PI / 2;
 highway.position.y = 0.1;
 
 //Plane noise
-const noise = createNoise2D();
 
 var amplitudes = new function() {
   this.octav1 = 66;
@@ -146,7 +182,7 @@ function computeTerrain(octav1,octav2,octav3,octav4,octav5, offset=0) {
   plane.geometry.computeVertexNormals();
 }
 
-var speed = {speed: 1};
+var speed = {speed: 20};
 
 //Gui
 const gui = new GUI()
@@ -166,7 +202,7 @@ AmplitudeFolder.add(amplitudes, 'octav5', 0, 20).onChange(
 AmplitudeFolder.open();
 
 const SpeedFolder = gui.addFolder('Speed');
-SpeedFolder.add(speed, 'speed', 1, 100);
+SpeedFolder.add(speed, 'speed', 1, 150);
 SpeedFolder.open();
 
 gui.updateDisplay();
@@ -175,13 +211,17 @@ var clock = new THREE.Clock();
 
 function animate() {
   requestAnimationFrame(animate);
-  //camera.position.z -= 1;
 
-  //Tidsvariabel
+  //Timevariabel
   var offset = clock.getElapsedTime()*speed.speed;
-  highway.material.uniforms.offset.value = offset;
+
+  //Update scene
+  texture.offset.y = offset*0.0004;
+  texture.needsUpdate = true;
   computeTerrain(amplitudes.octav1,amplitudes.octav2,amplitudes.octav3, amplitudes.octav4, amplitudes.octav5, offset);
-  controls.update();
+
+  //controls.update();
+
 	renderer.render(scene, camera);
 }
 animate();
