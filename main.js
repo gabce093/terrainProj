@@ -3,12 +3,17 @@ import { createNoise2D } from 'simplex-noise';
 import * as THREE from 'three';
 import { OrbitControls } from './node_modules/three/examples/jsm/controls/OrbitControls';
 import { GUI } from 'dat.gui'
-//import {Sky} from './node_modules/three/examples/jsm/objects/Sky.js';
+import {Sky} from './node_modules/three/examples/jsm/objects/Sky.js';
 import { hwFrag, hwVert } from './highwayShaders';
 
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
+
+//Test for skyshader
+renderer.toneMappingExposure = 0.5;
+
 document.body.appendChild(renderer.domElement);
+
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
@@ -25,24 +30,33 @@ light.position.z = -2000;
 light.position.x = 0;
 light.position.y = 200;
 
-light.position
 
-//Sky
-//let sky = new Sky();
-//sky.scale.setScalar( 450000 );
-//scene.add( sky );
 
+//Sky-Shader
+let skyShader = new Sky();
+skyShader.scale.setScalar( 4500000 );
+scene.add( skyShader );
+sun = new THREE.Vector3(10000, 10000, 10000);
+
+console.log(skyShader.material.uniforms)
+const phi = THREE.MathUtils.degToRad( 90 - 2 );
+const theta = THREE.MathUtils.degToRad( 180 );
+
+sun.setFromSphericalCoords( 1, phi, theta );
+skyShader.material.uniforms.sunPosition.value.copy(sun);
+skyShader.material.uniforms.rayleigh.value = 5;
+skyShader.material.uniforms.mieDirectionalG.value = 0.5;
+
+//Sky-sphere
 var skyMaterial = new THREE.MeshStandardMaterial({
   color: 0xe600e6,
 });
-
-
 var skyGeo = new THREE.SphereGeometry(800, 25, 25);
 var sky = new THREE.Mesh(skyGeo, skyMaterial);
 sky.material.side = THREE.BackSide;
-scene.add(sky);
+//scene.add(sky);
 
-//sun
+//Sun-Sphere
 var sunMaterial = new THREE.MeshStandardMaterial({
   color: 0xe65c00,
   emissive: 0xe65c00,
@@ -50,7 +64,7 @@ var sunMaterial = new THREE.MeshStandardMaterial({
 });
 var sunGeo = new THREE.SphereGeometry(400, 25, 25);
 var sun = new THREE.Mesh(sunGeo, sunMaterial);
-scene.add(sun);
+//scene.add(sun);
 sun.translateZ(-700);
 sun.translateY(150);
 
@@ -61,9 +75,9 @@ light.position.y = 150;
 
 //Fog
 const color = 0xFFFFFF;  // white
-const near = 1000;
+const near = 1300;
 const far = 1700;
-//scene.fog = new THREE.Fog(color, near, far);
+scene.fog = new THREE.Fog(color, near, far);
 
 //Plane
 const planeWidth = 2000;
