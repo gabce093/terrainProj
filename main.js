@@ -25,22 +25,29 @@ const onProgress = function ( xhr ) {
   }
 };
 //Loads the car
-function loadCar (){ 
-  new MTLLoader()
-  .setPath( '' )
-  .load( 'CyberpunkDeLorean.mtl', function ( materials ) {
-    materials.preload();
-    new OBJLoader()
-      .setMaterials( materials )
-      .setPath( '' )
-      .load( 'CyberpunkDeLorean.obj', function ( object ) {
-        object.position.set( 0.0,6.0,950 );
-        var xRot = new THREE.Euler( Math.PI/2.0, Math.PI/1.0 , 0.0, 'XYZ' );
-        object.rotation.copy(xRot);
-        scene.add( object );
-      }, onProgress );
-  } );
+
+function loadCar(onOff){ 
+  if(onOff){
+    new MTLLoader()
+    .setPath( '' )
+    .load( 'CyberpunkDeLorean.mtl', function ( materials ) {
+      materials.preload();
+      new OBJLoader()
+        .setMaterials( materials )
+        .setPath( '' )
+        .load( 'CyberpunkDeLorean.obj', function ( car ) {
+          car.position.set( 0.0,6.0,950 );
+          var Rot = new THREE.Euler( Math.PI/2.0, Math.PI/1.0 , 0.0, 'XYZ' );
+          car.rotation.copy(Rot);
+          car.name = 'car';
+          scene.add( car );
+         
+        }, onProgress );
+    } );
   }
+  scene.remove(scene.getObjectByName('car'));
+  }
+
   //turn car on or off
   var controller = new function() {  
     this.onOrOff=false;
@@ -233,7 +240,7 @@ SpeedFolder.add(speed, 'speed', 1, 150);
 SpeedFolder.open();
 
 const carFolder = gui.addFolder('Car');
-carFolder.add(controller, 'onOrOff').listen().onChange(loadCar);
+carFolder.add(controller, 'onOrOff').onChange( () => loadCar(controller.onOrOff));
 
 gui.updateDisplay();
 
