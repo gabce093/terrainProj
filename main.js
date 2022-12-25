@@ -8,6 +8,7 @@ import { hwFrag, hwVert } from './highwayShaders';
 import { CanvasTexture } from 'three';
 import { OBJLoader } from './node_modules/three/examples/jsm/loaders/OBJLoader.js';
 import { MTLLoader } from './node_modules/three/examples/jsm/loaders/MTLLoader.js';
+import { fbm, ridgedFbm } from './fbm';
 
 const noise = createNoise2D();
 const renderer = new THREE.WebGLRenderer();
@@ -55,12 +56,12 @@ function loadCar(onOff){
 
 //scene
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2500);
 
 //const controls = new OrbitControls(camera, renderer.domElement);
-
 //controls.update() must be called after any manual changes to the camera's transform
-camera.position.set(0, 30, 1000);
+
+camera.position.set(0, 20, 1000);
 
 scene.add(new THREE.AmbientLight(0x000055, 0.5));
 var light = new THREE.PointLight(0xe65c00, 1);
@@ -93,9 +94,9 @@ const far = 1700;
 //scene.fog = new THREE.Fog(color, near, far);
 
 //Plane
-const planeWidth = 2000;
-const planeHeight = 2000;
-var geometry = new THREE.PlaneGeometry(planeWidth*1.5, planeHeight*1.5,256, 256);
+const planeWidth = 2000*1.5;
+const planeHeight = 2000*1.5;
+var geometry = new THREE.PlaneGeometry(planeWidth, planeHeight,256, 256);
 var material = new THREE.MeshPhongMaterial();
 
 var plane = new THREE.Mesh(geometry, material);
@@ -106,21 +107,21 @@ var highway_geometry = new THREE.PlaneGeometry(highway_size+5, planeHeight, 20, 
 
 //Generate highway colortexture
 const color_ctx = document.createElement('canvas').getContext('2d');
-color_ctx.canvas.width = 30;
-color_ctx.canvas.height = 256;
+color_ctx.canvas.width = 81;
+color_ctx.canvas.height = 256*2;
 var texture = new CanvasTexture(color_ctx.canvas)
 texture.wrapT = THREE.RepeatWrapping;
 texture.repeat.y = 1;
-texture.minFilter = THREE.NearestFilter;
+//texture.minFilter = THREE.NearestFilter;
 
 function drawHighway() {
   color_ctx.fillStyle = 'black';
   color_ctx.fillRect(0, 0, color_ctx.canvas.width, color_ctx.canvas.height);
-  const x = 14;
+  const x = 40;
   color_ctx.fillStyle = '#fff2ca';
 
   for(var y = 0; y < color_ctx.canvas.height; y += 8) {
-    color_ctx.fillRect(x, y, 2, 5);
+    color_ctx.fillRect(x, y, 3, 5);
   }
   texture.needsUpdate = true;
 }
@@ -162,24 +163,26 @@ scene.add(highway);
 highway.rotation.x = -Math.PI / 2;
 scene.add(plane);
 plane.rotation.x = -Math.PI / 2;
-highway.position.y = 0.1;
+highway.position.y = 0.17;
 
 //Generate Terrain
 
 //Customizable variables
 var speed = {speed: 20};
 var amplitudes = new function() {
-  this.octav1 = 66;
-  this.octav2 = 7;
-  this.octav3 = 11.2;
-  this.octav4 = 3.3;
-  this.octav5 = 2.3;
+  this.octav1 = 60;
+  this.octav2 = 30;
+  this.octav3 = 15;
+  this.octav4 = 7.5;
+  this.octav5 = 7.5/2;
 }
 var ridged = {ridged: false};
+var overview = {overview: false};
 
 function computeTerrain(octav1,octav2,octav3,octav4,octav5, offset=0) {
   var octave_value = 0.002;
   var distance_from_highway = 0;
+  var elevation = 0;
 
   for (var i = 2; i < plane.geometry.attributes.position.array.length; i = i + 3) {
 
@@ -187,21 +190,14 @@ function computeTerrain(octav1,octav2,octav3,octav4,octav5, offset=0) {
     var y = plane.geometry.attributes.position.array[i-1]+offset;
 
     if (x > highway_size || x < -highway_size){
-      distance_from_highway = Math.abs(x) - 10;
+      distance_from_highway = Math.abs(x) - highway_size;
     } 
-  
-    var elevation = (octav1*noise(x * octave_value, y * octave_value) + 
-    octav2*noise(x * octave_value* 2, y * octave_value*2)+
-    octav3*noise(x * octave_value* 4, y * octave_value*4)+
-    octav4*noise(x * octave_value* 8, y * octave_value*8)+
-    octav5*noise(x * octave_value* 16, y * octave_value*16));
 
     if(ridged.ridged) {
-      elevation = Math.abs(elevation);
-      elevation = 1 - elevation;
-      elevation *= elevation;
-      plane.geometry.attributes.position.array[i] = elevation*distance_from_highway*0.00007;
+      elevation = ridgedFbm([octav1,octav2,octav3,octav4,octav5], octave_value, x, y);
+      plane.geometry.attributes.position.array[i] = elevation*distance_from_highway*0.004;
     } else {
+      elevation = fbm([octav1,octav2,octav3,octav4,octav5], octave_value, x, y);
       plane.geometry.attributes.position.array[i] = elevation*distance_from_highway*0.005;
     }
     
@@ -212,6 +208,15 @@ function computeTerrain(octav1,octav2,octav3,octav4,octav5, offset=0) {
   plane.geometry.computeVertexNormals();
 }
 
+function changeCamera() {
+  if (overview.overview){
+    camera.position.set(0,700,1600)  
+    camera.rotation.x = -Math.PI / 4;
+    return;
+  } 
+  camera.position.set(0, 20, 1000);
+  camera.rotation.x = 0;
+}
 
 
 //Gui
@@ -240,7 +245,10 @@ SpeedFolder.add(speed, 'speed', 1, 150);
 SpeedFolder.open();
 
 const carFolder = gui.addFolder('Car');
-carFolder.add(controller, 'onOrOff').onChange( () => loadCar(controller.onOrOff));
+carFolder.add(controller, 'onOrOff').onChange(() => loadCar(controller.onOrOff));
+
+const overviewFolder = gui.addFolder('Overview');
+overviewFolder.add(overview, 'overview').onChange(() => changeCamera());
 
 gui.updateDisplay();
 
