@@ -5,7 +5,6 @@
 Background and sun
 
 Infinite terrain
-(Maybe look at frustum or something)
 
 Moving Camera
 
@@ -16,6 +15,13 @@ Highway
 # Extras:
 
 Trees
+
+Buildings
+
+Lightpoles
+
+Add sliders for the values in the postprocessing
+
 
 
 
