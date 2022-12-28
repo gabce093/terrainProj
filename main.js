@@ -144,7 +144,6 @@ box_ctx.fillRect(box_ctx.canvas.width/2-0.5, 0, 1, box_ctx.canvas.height);
 box_ctx.fillRect(0, box_ctx.canvas.height/2-0.5, box_ctx.canvas.width, 1);
 
 const terrain_ctx = document.createElement('canvas').getContext('2d');
-document.body.appendChild(box_ctx.canvas);
 terrain_ctx.canvas.width = 256*16;
 terrain_ctx.canvas.height = 256*16;
 var pattern = box_ctx.createPattern(box_ctx.canvas, 'repeat');
