@@ -5,7 +5,7 @@ import { OrbitControls } from './node_modules/three/examples/jsm/controls/OrbitC
 import { GUI } from 'dat.gui'
 import {Sky} from './node_modules/three/examples/jsm/objects/Sky.js';
 import { hwFrag, hwVert } from './highwayShaders';
-import { CanvasTexture } from 'three';
+import { CanvasTexture, Mesh } from 'three';
 import { OBJLoader } from './node_modules/three/examples/jsm/loaders/OBJLoader.js';
 import { MTLLoader } from './node_modules/three/examples/jsm/loaders/MTLLoader.js';
 import { fbm, ridgedFbm } from './fbm';
@@ -14,7 +14,7 @@ import { EffectComposer } from './node_modules/three/examples/jsm/postprocessing
 import { UnrealBloomPass } from './node_modules/three/examples/jsm/postprocessing/UnrealBloomPass';
 import { HalftonePass } from './node_modules/three/examples/jsm/postprocessing/HalftonePass';
 
-
+import { AnimationClip, VectorKeyframeTrack , AnimationMixer} from "three";
 
 const noise = createNoise2D();
 const renderer = new THREE.WebGLRenderer();
@@ -40,36 +40,65 @@ const onProgress = function ( xhr ) {
     console.log( Math.round( percentComplete, 2 ) + '% downloaded' );
   }
 };
+
 //Loads the car
+var objLoader = new OBJLoader();
+var mtlLoader = new MTLLoader();
 function loadCar(onOff){ 
   if(onOff){
-    new MTLLoader()
+    return new Promise(resolve => {
+  var container = new THREE.Object3D();
+    mtlLoader
     .setPath( '' )
     .load( 'CyberpunkDeLorean.mtl', function ( materials ) {
       materials.preload();
-      console.log(materials)
+      //console.log(materials)
       materials.materials.DeLorean_RedLight.emissiveIntensity = 1000;
       //materials.materials.DeLorean_RedLight.lightMap = red_lights;
       //materials.materials.DeLorean_RedLight.lightMapIntensity = 100;
-      new OBJLoader()
-        .setMaterials( materials )
-        .setPath( '' )
-        .load( 'CyberpunkDeLorean.obj', function ( car ) {
+      objLoader.setMaterials( materials )
+        .setPath('')
+        .load('CyberpunkDeLorean.obj', function ( car ) {
           car.position.set( 0.0,6.0,960);
-          //car.scale.set(0.5,0.5,0.5);
           var Rot = new THREE.Euler( Math.PI/2.0, Math.PI/1.0 , 0.0, 'XYZ' );
           car.rotation.copy(Rot);
           car.name = 'car';
-          scene.add( car );
+         
+          container.add(car);
+
+         // scene.add( container );
+          resolve(container);
         }, onProgress );
-    } );
-  }
+       
+    } );  
+  });
+}
   scene.remove(scene.getObjectByName('car'));
   }
 
-//turn car on or off
-var controller = new function() {  
-  this.onOrOff=false;
+//Animate the car
+const times = [0, 2, 3, 4];
+const values = [2, 6, 1010,   1, 5, 990,   1, 7, 975,   0, 6, 960];
+const positionKF = new VectorKeyframeTrack(".position", times, values);
+const tracks = [positionKF];
+
+const length = -1;
+const clip = new AnimationClip("slowmove", length, tracks);
+
+const mixer = new AnimationMixer();
+async function driveForward(onOff) {
+  console.log(onOff)
+   var carContainer = await loadCar(onOff);
+   carContainer.name = 'carcontainer';
+
+   var theCar = carContainer.getObjectByName('car');
+   scene.add(theCar);
+   var action = mixer.clipAction(clip, theCar);//
+                                                 
+   action.clampWhenFinished = true;
+   action.setLoop(THREE.LoopOnce); 
+   action.fadeOut(6);
+   action.play();
 }
 
 //Scene
@@ -235,6 +264,11 @@ scene.add(plane);
 scene.add( skyShader );
 scene.add(highway);
 
+//turn car on or off
+var drive = new function() {  
+  this.Spawn=false;
+}
+
 //Customizable variables
 var speed = {speed: 20};
 var amplitudes = new function() {
@@ -319,7 +353,7 @@ SpeedFolder.add(speed, 'speed', 1, 150);
 SpeedFolder.open();
 
 const carFolder = gui.addFolder('Car');
-carFolder.add(controller, 'onOrOff').onChange(() => loadCar(controller.onOrOff));
+carFolder.add(drive, 'Spawn').onChange( () => driveForward(drive.Spawn));
 
 const overviewFolder = gui.addFolder('Overview');
 overviewFolder.add(overview, 'overview').onChange(() => changeCamera());
@@ -348,6 +382,8 @@ function animate() {
   computeTerrain(amplitudes.octav1,amplitudes.octav2,amplitudes.octav3, amplitudes.octav4, amplitudes.octav5, offset);
 
   //controls.update();
+  const delta = clock.getDelta();
+  mixer.update(delta);
 
   composer.render();
 	//renderer.render(scene, camera);
