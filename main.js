@@ -13,16 +13,27 @@ import { RenderPass } from './node_modules/three/examples/jsm/postprocessing/Ren
 import { EffectComposer } from './node_modules/three/examples/jsm/postprocessing/EffectComposer';
 import { UnrealBloomPass } from './node_modules/three/examples/jsm/postprocessing/UnrealBloomPass';
 import { HalftonePass } from './node_modules/three/examples/jsm/postprocessing/HalftonePass';
+import {AnaglyphEffect} from './node_modules/three/examples/jsm/effects/AnaglyphEffect';
 
 import { AnimationClip, VectorKeyframeTrack , AnimationMixer} from "three";
 
 const noise = createNoise2D();
 const renderer = new THREE.WebGLRenderer();
+const effect = new AnaglyphEffect( renderer );
+
 renderer.setSize(window.innerWidth, window.innerHeight);
 
 //Test for skyshader
 renderer.toneMappingExposure = 0.5;
 document.body.appendChild(renderer.domElement);
+
+//Scene
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2500);
+
+const renderScene = new RenderPass(scene, camera);
+const composer = new EffectComposer(renderer);
+composer.addPass(renderScene);
 
 //Red lights
 const red_ctx = document.createElement('canvas').getContext('2d');
@@ -59,7 +70,7 @@ function loadCar(onOff){
       objLoader.setMaterials( materials )
         .setPath('')
         .load('CyberpunkDeLorean.obj', function ( car ) {
-          car.position.set( 0.0,6.0,960);
+          car.position.set( 2.0,6.0, 1010.0);
           var Rot = new THREE.Euler( Math.PI/2.0, Math.PI/1.0 , 0.0, 'XYZ' );
           car.rotation.copy(Rot);
           car.name = 'car';
@@ -73,41 +84,63 @@ function loadCar(onOff){
     } );  
   });
 }
-  scene.remove(scene.getObjectByName('car'));
   }
+//car
+var carContainer = await loadCar(true);
+carContainer.name = 'carcontainer';
+var theCar = carContainer.getObjectByName('car');
+scene.add(theCar);
+
 
 //Animate the car
 const times = [0, 2, 3, 4];
-const values = [2, 6, 1010,   1, 5, 990,   1, 7, 975,   0, 6, 960];
+const values = [2, 6, 1010,   1, 6.5, 990,   1, 6, 975,   0, 6.2, 960];
+const valuesBack = [ 0, 6, 960,    1, 6.5, 975,      1, 6, 995,      2, 6.2, 1010];
 const positionKF = new VectorKeyframeTrack(".position", times, values);
+const positionKFBack = new VectorKeyframeTrack(".position", times,  valuesBack);
 const tracks = [positionKF];
+const tracksBack = [positionKFBack];
 
 const length = -1;
-const clip = new AnimationClip("slowmove", length, tracks);
+const clip = new AnimationClip("forward", length, tracks);
+const clipBack = new AnimationClip("forward", length, tracksBack);
 
 const mixer = new AnimationMixer();
-async function driveForward(onOff) {
-  console.log(onOff)
-   var carContainer = await loadCar(onOff);
-   carContainer.name = 'carcontainer';
+var forwardAction = mixer.clipAction(clip, theCar);
+var backAction = mixer.clipAction(clipBack, theCar);
 
-   var theCar = carContainer.getObjectByName('car');
-   scene.add(theCar);
-   var action = mixer.clipAction(clip, theCar);//
-                                                 
-   action.clampWhenFinished = true;
-   action.setLoop(THREE.LoopOnce); 
-   action.fadeOut(6);
-   action.play();
+//Delay for animation
+function delay(millisec) {
+  return new Promise(resolve => {
+      setTimeout(() => { resolve('') }, millisec);
+  })
 }
 
-//Scene
-const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2500);
+async function driveForward(onOff) {
+  //if statement to check if car is in front or the back
+   if(!onOff){
+    //set to position of forward animation
+    theCar.position.set(0, 6, 960);
+    //stop forward animation
+    forwardAction.stop();
+    backAction.setLoop(THREE.LoopOnce); 
+    backAction.clampWhenFinished = true;
+    backAction.play();
+   }else{
+  //set to position of back animation
+   theCar.position.set( 2, 6, 1010);
+  //stop back animation
+   backAction.stop();
+   //initiate and start forward animation
+   forwardAction.setLoop(THREE.LoopOnce); 
+   forwardAction.clampWhenFinished = true;
+   forwardAction.play();
+   }
+}
 
-const renderScene = new RenderPass(scene, camera);
-const composer = new EffectComposer(renderer);
-composer.addPass(renderScene);
+
+
+
 
 //Post-Processing
 const bloompass = new UnrealBloomPass(
@@ -385,7 +418,7 @@ function animate() {
   const delta = clock.getDelta();
   mixer.update(delta);
 
-  composer.render();
+  composer.render(scene, camera);
 	//renderer.render(scene, camera);
 }
 animate();
