@@ -48,8 +48,8 @@ newmtl DeLorean_MainBody
 	Kd 0.588000 0.588000 0.588000
 	Ks 0.036000 0.036000 0.036000
 	Ke 0.023520 0.023520 0.023520
-	map_Ka DeLorean.jpg
-	map_Kd DeLorean.jpg
+	map_Ka ./DeLorean.jpg
+	map_Kd ./DeLorean.jpg
 
 newmtl DeLorean_Motore
 	Ns 19.999998
