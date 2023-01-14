@@ -1,7 +1,6 @@
 import "./style.css";
 import { createNoise2D } from "simplex-noise";
 import * as THREE from "three";
-import { OrbitControls } from "./node_modules/three/examples/jsm/controls/OrbitControls";
 import { GUI } from "dat.gui";
 import { Sky } from "./node_modules/three/examples/jsm/objects/Sky.js";
 import { CanvasTexture, Mesh } from "three";
@@ -12,15 +11,12 @@ import { RenderPass } from "./node_modules/three/examples/jsm/postprocessing/Ren
 import { EffectComposer } from "./node_modules/three/examples/jsm/postprocessing/EffectComposer";
 import { UnrealBloomPass } from "./node_modules/three/examples/jsm/postprocessing/UnrealBloomPass";
 import { HalftonePass } from "./node_modules/three/examples/jsm/postprocessing/HalftonePass";
-import { AnaglyphEffect } from "./node_modules/three/examples/jsm/effects/AnaglyphEffect";
 import { AnimationClip, VectorKeyframeTrack, AnimationMixer } from "three";
 
+//Renderer
 const noise = createNoise2D();
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
-
-//Test for skyshader
-renderer.toneMappingExposure = 0.5;
 document.body.appendChild(renderer.domElement);
 
 //Scene
@@ -54,14 +50,15 @@ const onProgress = function (xhr) {
 //Loads the car
 var objLoader = new OBJLoader();
 var mtlLoader = new MTLLoader();
-
 var brightenss = 200.0;
 function loadCar(onOff) {
   if (onOff) {
     return new Promise((resolve) => {
       var container = new THREE.Object3D();
+      //Load car materials
       mtlLoader.setPath("").load("CyberpunkDeLorean.mtl", function (materials) {
         materials.preload();
+        //Modify car materials
         //Lights
         materials.materials.DeLorean_RedLight.emissiveIntensity = 1000;
         materials.materials.DeLorean_RedLight.lightMap = red_lights;
@@ -90,7 +87,7 @@ function loadCar(onOff) {
         materials.materials.DeLorean_DarkCables.emissiveIntensity = brightenss;
         materials.materials.DeLorean_BrightCables.emissiveIntensity =
           brightenss;
-
+        //Load car model
         objLoader
           .setMaterials(materials)
           .setPath("")
@@ -105,8 +102,6 @@ function loadCar(onOff) {
                 child.castShadow = true;
                 child.receiveShadow = true;
               });
-
-              //console.log(car);
               container.add(car);
               resolve(container);
             },
@@ -116,16 +111,16 @@ function loadCar(onOff) {
     });
   }
 }
-//car
+//Load and add to scene
 var carContainer = await loadCar(true);
 carContainer.name = "carcontainer";
-
 var theCar = carContainer.getObjectByName("car");
+scene.add(theCar);
 theCar.castShadow = true;
 theCar.receiveShadow = true;
-scene.add(theCar);
 
-//Animate the car
+//--Animate the car--//
+//Keyframs
 const times = [0, 2, 3, 4];
 const values = [2, 6, 1010, 1, 6.5, 990, 1, 6, 975, 0, 6.2, 960];
 const valuesBack = [0, 6, 960, 1, 6.5, 975, 1, 6, 995, 2, 6.2, 1010];
@@ -133,24 +128,16 @@ const positionKF = new VectorKeyframeTrack(".position", times, values);
 const positionKFBack = new VectorKeyframeTrack(".position", times, valuesBack);
 const tracks = [positionKF];
 const tracksBack = [positionKFBack];
-
+//Create animation
 const length = -1;
 const clip = new AnimationClip("forward", length, tracks);
 const clipBack = new AnimationClip("forward", length, tracksBack);
-
+//Apply animation to model
 const mixer = new AnimationMixer();
 var forwardAction = mixer.clipAction(clip, theCar);
 var backAction = mixer.clipAction(clipBack, theCar);
 
-//Delay for animation
-function delay(millisec) {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve("");
-    }, millisec);
-  });
-}
-
+//--Function to start car animation--//
 async function driveForward(onOff) {
   //if statement to check if car is in front or the back
   if (!onOff) {
@@ -182,10 +169,9 @@ const bloompass = new UnrealBloomPass(
 );
 const halftone = new HalftonePass(window.innerWidth, window.innerHeight);
 
-//const controls = new OrbitControls(camera, renderer.domElement);
-//controls.update() must be called after any manual changes to the camera's transform
-
+//set camera position
 camera.position.set(0, 20, 1000);
+//Add lights
 var ambient = new THREE.AmbientLight(0x000055, 0.5);
 scene.add(ambient);
 var light = new THREE.PointLight(0xe65c00, 2);
@@ -195,10 +181,10 @@ light.position.z = -2000;
 light.position.x = 0;
 light.position.y = 200;
 
-light.shadow.mapSize.width = 512; // default
-light.shadow.mapSize.height = 512; // default
-light.shadow.camera.near = 100; // default
-light.shadow.camera.far = 3000; // default
+light.shadow.mapSize.width = 512; 
+light.shadow.mapSize.height = 512; 
+light.shadow.camera.near = 100; 
+light.shadow.camera.far = 3000; 
 light.intensity = 3;
 
 //Sky-Shader
@@ -267,7 +253,6 @@ color_ctx.canvas.height = 256 * 2;
 var texture = new CanvasTexture(color_ctx.canvas);
 texture.wrapT = THREE.RepeatWrapping;
 texture.repeat.y = 1;
-//texture.minFilter = THREE.NearestFilter;
 
 function drawHighway() {
   color_ctx.fillStyle = "blackk";
@@ -306,11 +291,9 @@ function drawBumpMap() {
 drawBumpMap();
 
 var highway_material = new THREE.MeshPhongMaterial({
-  //map: texture,
   bumpMap: bump_map,
   lightMap: texture,
   lightMapIntensity: 1,
-  //reflectivity: 100,
 });
 var highway = new THREE.Mesh(highway_geometry, highway_material);
 const uv1Array2 = highway.geometry.getAttribute("uv").array;
@@ -323,6 +306,7 @@ highway.position.y = 3.18;
 scene.add(plane);
 scene.add(skyShader);
 scene.add(highway);
+
 
 //turn car on or off
 var drive = new (function () {
@@ -425,7 +409,7 @@ AmplitudeFolder.add(amplitudes, "octav2", 0, 100).onChange(() =>
 );
 AmplitudeFolder.add(amplitudes, "octav3", 0, 100).onChange(() =>
   computeTerrain(
-    amplitudes.octav1,
+    amplitudes.octav1, 
     amplitudes.octav2,
     amplitudes.octav3,
     amplitudes.octav4,
@@ -486,8 +470,6 @@ postprocessingFolder
     value ? composer.addPass(bloompass) : composer.removePass(bloompass)
   );
 
-gui.updateDisplay();
-
 var clock = new THREE.Clock();
 
 function animate() {
@@ -511,12 +493,10 @@ function animate() {
     offset
   );
 
-  //controls.update();
+  //Update the animation of the car
   const delta = clock.getDelta();
-
   mixer.update(delta);
 
   composer.render(scene, camera);
-  //renderer.render(scene, camera);
 }
 animate();
