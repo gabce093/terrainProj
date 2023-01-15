@@ -1,26 +1,7 @@
-# terrainProj
+School project by Gabriel Cederqvist and Victor Imark
 
-# To-do list:
 
-Background and sun
 
-Infinite terrain
-
-Moving Camera
-
-Coloring
-
-Highway
-
-# Extras:
-
-Trees
-
-Buildings
-
-Lightpoles
-
-Add sliders for the values in the postprocessing
 
 
 
