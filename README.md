@@ -1,4 +1,4 @@
-# Procedural Terrain
+# Procedural Synthwave Terrain
 ### A project by Gabriel Cederqvist and Victor Imark
 Javascript, WebGL, Three.js, GLSL
 #### Images of the final scene:
