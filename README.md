@@ -1,5 +1,5 @@
 # Procedural Terrain
-### Project by Gabriel Cederqvist and Victor Imark
+### A project by Gabriel Cederqvist and Victor Imark
 Javascript, WebGL, Three.js, GLSL
 #### Images of the final scene:
 ![alt text](https://github.com/gabce093/terrainProj/blob/master/exampleImages/FinishedProduct.png)
